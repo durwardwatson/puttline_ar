@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PuttLine AR</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;900&family=Barlow:wght@300;400;500&display=swap');
+
+  :root {
+    --green: #00c96e;
+    --green-dim: #00c96e44;
+    --amber: #f5a623;
+    --red: #ff3b3b;
+    --bg: #080f0a;
+    --panel: rgba(8,15,10,0.88);
+    --border: rgba(0,201,110,0.22);
+    --text: #e8f5ed;
+    --muted: #5a7a63;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    height: 100dvh;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #app {
+    position: relative;
+    width: 100%;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── SPLASH SCREEN ── */
+  #splash {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    z-index: 100;
+    gap: 0;
+  }
+
+  .splash-logo {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: clamp(52px, 14vw, 96px);
+    letter-spacing: -2px;
+    line-height: 0.9;
+    color: var(--green);
+    text-transform: uppercase;
+    animation: fadeUp 0.8s ease both;
+  }
+
+  .splash-sub {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 300;
+    font-size: clamp(14px, 4vw, 20px);
+    letter-spacing: 8px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 8px;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+
+  .splash-divider {
+    width: 40px;
+    height: 2px;
+    background: var(--green);
+    margin: 32px 0;
+    animation: expandWidth 0.6s 0.5s ease both;
+  }
+
+  .splash-desc {
+    font-size: 14px;
+    color: var(--muted);
+    text-align: center;
+    max-width: 280px;
+    line-height: 1.6;
+    animation: fadeUp 0.8s 0.4s ease both;
+  }
+
+  #startBtn {
+    margin-top: 48px;
+    background: var(--green);
+    color: #050d07;
+    border: none;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 18px 48px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    animation: fadeUp 0.8s 0.6s ease both;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  #startBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,201,110,0.4);
+  }
+
+  #startBtn:active { transform: translateY(0); }
+
+  /* ── AR VIEW ── */
+  #arView {
+    display: none;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  #video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  #canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  /* ── HUD ── */
+  #hud {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hud-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 52px 20px 16px;
+    pointer-events: none;
+  }
+
+  .hud-logo {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: 22px;
+    letter-spacing: 1px;
+    color: var(--green);
+    text-shadow: 0 0 20px rgba(0,201,110,0.5);
+  }
+
+  .hud-logo span {
+    color: var(--text);
+    font-weight: 300;
+  }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    backdrop-filter: blur(12px);
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+
+  .status-dot.active {
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  .status-dot.analyzing {
+    background: var(--amber);
+    box-shadow: 0 0 8px var(--amber);
+    animation: pulse 0.8s infinite;
+  }
+
+  /* Corner brackets */
+  .corner-frame {
+    position: absolute;
+    inset: 80px 16px 160px;
+    pointer-events: none;
+  }
+
+  .corner {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    border-color: rgba(0,201,110,0.55);
+    border-style: solid;
+  }
+
+  .corner.tl { top: 0; left: 0; border-width: 2px 0 0 2px; }
+  .corner.tr { top: 0; right: 0; border-width: 2px 2px 0 0; }
+  .corner.bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
+  .corner.br { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+
+  /* Center crosshair */
+  .crosshair {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px;
+    height: 24px;
+  }
+
+  .crosshair::before,
+  .crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(0,201,110,0.6);
+  }
+
+  .crosshair::before { width: 1px; height: 100%; top: 0; left: 50%; transform: translateX(-50%); }
+  .crosshair::after  { width: 100%; height: 1px; top: 50%; left: 0; transform: translateY(-50%); }
+
+  /* ── ANALYSIS PANEL ── */
+  .hud-bottom {
+    margin-top: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: all;
+  }
+
+  #analysisPanel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(16px);
+    padding: 16px 18px;
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .panel-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .panel-confidence {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  #analysisText {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text);
+  }
+
+  .read-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .read-cell {
+    background: rgba(0,201,110,0.06);
+    border: 1px solid var(--border);
+    padding: 10px 8px;
+    text-align: center;
+  }
+
+  .read-cell-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .read-cell-value {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--green);
+  }
+
+  /* ── BUTTONS ── */
+  #analyzeBtn {
+    background: var(--green);
+    color: #050d07;
+    border: none;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 18px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #analyzeBtn:active { transform: scale(0.98); }
+  #analyzeBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  #analyzeBtn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 50%, transparent 100%);
+    transform: translateX(-100%);
+    animation: shimmer 2.5s infinite;
+  }
+
+  #clearBtn {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 400;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 10px;
+    cursor: pointer;
+    width: 100%;
+    transition: color 0.2s, border-color 0.2s;
+  }
+
+  #clearBtn:hover { color: var(--text); border-color: rgba(0,201,110,0.4); }
+
+  /* ── LOADING OVERLAY ── */
+  #loadingOverlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    background: rgba(8,15,10,0.7);
+    backdrop-filter: blur(2px);
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  #loadingOverlay.visible { display: flex; }
+
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 2px solid var(--green-dim);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+
+  .loading-text {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--green);
+    animation: blink 1.2s ease infinite;
+  }
+
+  /* ── ERROR TOAST ── */
+  #toast {
+    position: absolute;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255,59,59,0.15);
+    border: 1px solid rgba(255,59,59,0.4);
+    color: #ff8080;
+    font-size: 13px;
+    padding: 10px 18px;
+    z-index: 200;
+    display: none;
+    max-width: 300px;
+    text-align: center;
+    backdrop-filter: blur(12px);
+  }
+
+  /* ── KEYFRAMES ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes expandWidth {
+    from { width: 0; opacity: 0; }
+    to   { width: 40px; opacity: 1; }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  @keyframes shimmer {
+    to { transform: translateX(200%); }
+  }
+
+  @keyframes pathDraw {
+    from { stroke-dashoffset: 2000; }
+    to   { stroke-dashoffset: 0; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SPLASH -->
+  <div id="splash">
+    <div class="splash-logo">Putt<br>Line</div>
+    <div class="splash-sub">AR Caddie</div>
+    <div class="splash-divider"></div>
+    <div class="splash-desc">Point your camera at the green. AI reads the slope and draws your ideal putt line.</div>
+    <button id="startBtn" onclick="startAR()">Open Camera</button>
+  </div>
+
+  <!-- AR VIEW -->
+  <div id="arView">
+    <video id="video" playsinline autoplay muted></video>
+    <canvas id="canvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud">
+      <div class="hud-top">
+        <div class="hud-logo">Putt<span>Line</span></div>
+        <div class="status-badge">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="statusText">READY</span>
+        </div>
+      </div>
+
+      <!-- Corner frame -->
+      <div class="corner-frame">
+        <div class="corner tl"></div>
+        <div class="corner tr"></div>
+        <div class="corner bl"></div>
+        <div class="corner br"></div>
+        <div class="crosshair"></div>
+      </div>
+
+      <!-- Bottom panel -->
+      <div class="hud-bottom">
+        <div id="analysisPanel">
+          <div class="panel-header">
+            <span class="panel-label">Putt Read</span>
+            <span class="panel-confidence" id="confidenceText"></span>
+          </div>
+          <div id="analysisText"></div>
+          <div class="read-grid" id="readGrid"></div>
+        </div>
+        <button id="analyzeBtn" onclick="analyzeFrame()">Read the Green</button>
+        <button id="clearBtn" onclick="clearAnalysis()" style="display:none">Clear Line</button>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loadingOverlay">
+      <div class="spinner"></div>
+      <div class="loading-text">Reading Green…</div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast"></div>
+  </div>
+
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────
+const API_URL = "https://api.anthropic.com/v1/messages";
+const MODEL   = "claude-sonnet-4-20250514";
+
+// ── STATE ────────────────────────────────────────────────
+let stream = null;
+let lastAnalysis = null;
+let animFrame = null;
+let arrowPhase = 0;
+
+// ── DOM ──────────────────────────────────────────────────
+const splash       = document.getElementById('splash');
+const arView       = document.getElementById('arView');
+const video        = document.getElementById('video');
+const canvas       = document.getElementById('canvas');
+const ctx          = canvas.getContext('2d');
+const analyzeBtn   = document.getElementById('analyzeBtn');
+const clearBtn     = document.getElementById('clearBtn');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const statusDot    = document.getElementById('statusDot');
+const statusText   = document.getElementById('statusText');
+const analysisPanel = document.getElementById('analysisPanel');
+const analysisText = document.getElementById('analysisText');
+const readGrid     = document.getElementById('readGrid');
+const confidenceText = document.getElementById('confidenceText');
+const toast        = document.getElementById('toast');
+
+// ── CAMERA ───────────────────────────────────────────────
+async function startAR() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      },
+      audio: false
+    });
+    video.srcObject = stream;
+    await video.play();
+    splash.style.display = 'none';
+    arView.style.display = 'block';
+    setStatus('LIVE', 'active');
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    renderLoop();
+  } catch(e) {
+    showToast('Camera access denied. Please allow camera permissions and reload.');
+  }
+}
+
+function resizeCanvas() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+// ── RENDER LOOP ──────────────────────────────────────────
+function renderLoop() {
+  arrowPhase = (arrowPhase + 0.04) % (Math.PI * 2);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (lastAnalysis) drawAROverlay(lastAnalysis);
+  animFrame = requestAnimationFrame(renderLoop);
+}
+
+// ── CAPTURE FRAME AS BASE64 ──────────────────────────────
+function captureFrame() {
+  const cap = document.createElement('canvas');
+  cap.width  = video.videoWidth  || 1280;
+  cap.height = video.videoHeight || 720;
+  cap.getContext('2d').drawImage(video, 0, 0, cap.width, cap.height);
+  return cap.toDataURL('image/jpeg', 0.82).split(',')[1];
+}
+
+// ── AI ANALYSIS ──────────────────────────────────────────
+async function analyzeFrame() {
+  if (analyzeBtn.disabled) return;
+
+  analyzeBtn.disabled = true;
+  loadingOverlay.classList.add('visible');
+  setStatus('ANALYZING', 'analyzing');
+  clearAnalysis(true);
+
+  const imageBase64 = captureFrame();
+
+  const systemPrompt = `You are an expert golf caddie and green-reading specialist with deep knowledge of green contours, slope analysis, and putting physics.
+
+Analyze the golf green image and respond ONLY with a valid JSON object (no markdown, no extra text) in this exact schema:
+{
+  "breakDirection": "left|right|straight",
+  "breakAmount": "slight|moderate|strong",
+  "breakDegrees": <number 0-35>,
+  "slopeSteepness": "flat|gentle|steep",
+  "slopePercent": <number 0-8>,
+  "aimPoint": "left edge|right edge|center|left center|right center",
+  "speedRecommendation": "firm|medium|soft",
+  "distanceCategory": "short|medium|long",
+  "confidence": "low|medium|high",
+  "summary": "<one sentence, max 18 words, expert caddie advice>",
+  "linePoints": [
+    {"x": <0.0-1.0>, "y": <0.0-1.0>},
+    ... 4-6 points from ball (bottom area) curving to hole (upper area)
+  ]
+}
+
+linePoints: x=0 is left edge, x=1 is right edge, y=0 is top, y=1 is bottom of frame.
+The ball is typically in the lower portion (y≈0.75-0.90) and the hole is in the upper or middle portion (y≈0.2-0.5).
+Curve the path based on the break you read. Include 5-6 control points.
+If you cannot see a clear green/golf context, still return valid JSON with confidence "low" and a note in summary.`;
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 } },
+            { type: 'text', text: 'Read this putt. Analyze the green contours and provide your line recommendation as JSON.' }
+          ]
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const raw = data.content.map(b => b.text || '').join('').trim();
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const analysis = JSON.parse(clean);
+
+    lastAnalysis = analysis;
+    showAnalysisPanel(analysis);
+    setStatus('LINE READY', 'active');
+    clearBtn.style.display = 'block';
+
+  } catch(e) {
+    console.error(e);
+    showToast('Could not read the green. Try again or move closer to the hole.');
+    setStatus('READY', 'active');
+  } finally {
+    analyzeBtn.disabled = false;
+    loadingOverlay.classList.remove('visible');
+  }
+}
+
+// ── DRAW AR OVERLAY ──────────────────────────────────────
+function drawAROverlay(analysis) {
+  if (!analysis?.linePoints?.length) return;
+  const W = canvas.width;
+  const H = canvas.height;
+
+  const pts = analysis.linePoints.map(p => ({
+    x: p.x * W,
+    y: p.y * H
+  }));
+
+  if (pts.length < 2) return;
+
+  // ── Glow shadow pass ──
+  ctx.save();
+  ctx.shadowColor = '#00c96e';
+  ctx.shadowBlur = 22;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // Gradient along path
+  const grad = ctx.createLinearGradient(pts[pts.length-1].x, pts[pts.length-1].y, pts[0].x, pts[0].y);
+  grad.addColorStop(0, 'rgba(0,201,110,0.1)');
+  grad.addColorStop(0.4, 'rgba(0,201,110,0.7)');
+  grad.addColorStop(1, 'rgba(245,166,35,0.9)');
+
+  // Draw smooth curve
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length - 1; i++) {
+    const mx = (pts[i].x + pts[i+1].x) / 2;
+    const my = (pts[i].y + pts[i+1].y) / 2;
+    ctx.quadraticCurveTo(pts[i].x, pts[i].y, mx, my);
+  }
+  ctx.lineTo(pts[pts.length-1].x, pts[pts.length-1].y);
+
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = 4;
+  ctx.setLineDash([]);
+  ctx.stroke();
+  ctx.restore();
+
+  // ── Animated moving arrows along path ──
+  const totalSegments = 8;
+  for (let i = 0; i < totalSegments; i++) {
+    const t = ((i / totalSegments) + arrowPhase / (Math.PI * 2)) % 1;
+    const pt = getPointOnPath(pts, t);
+    const pt2 = getPointOnPath(pts, Math.min(t + 0.02, 1));
+    const angle = Math.atan2(pt2.y - pt.y, pt2.x - pt.x);
+    const alpha = Math.sin(t * Math.PI) * 0.9;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(pt.x, pt.y);
+    ctx.rotate(angle);
+    drawArrowHead(ctx, 10, '#00c96e');
+    ctx.restore();
+  }
+
+  // ── Ball marker (start) ──
+  const start = pts[0];
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(start.x, start.y, 14, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,201,110,0.15)';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(start.x, start.y, 9, 0, Math.PI * 2);
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = '#00c96e';
+  ctx.shadowBlur = 12;
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.fill();
+  ctx.restore();
+
+  // ── Hole marker (end) ──
+  const end = pts[pts.length - 1];
+  const pulse = 0.5 + 0.5 * Math.sin(arrowPhase * 3);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(end.x, end.y, 16 + pulse * 4, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(245,166,35,${0.4 + pulse * 0.3})`;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(end.x, end.y, 10, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(245,166,35,0.2)';
+  ctx.fill();
+  ctx.strokeStyle = '#f5a623';
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = '#f5a623';
+  ctx.shadowBlur = 14;
+  ctx.stroke();
+  // Flag icon
+  ctx.fillStyle = '#f5a623';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('⛳', end.x, end.y);
+  ctx.restore();
+
+  // ── Break indicator label ──
+  if (analysis.breakDirection && analysis.breakAmount) {
+    const midPt = getPointOnPath(pts, 0.45);
+    ctx.save();
+    ctx.font = '600 12px Barlow, sans-serif';
+    ctx.textAlign = 'center';
+    const label = `${analysis.breakAmount} ${analysis.breakDirection}`.toUpperCase();
+    const tw = ctx.measureText(label).width;
+    ctx.fillStyle = 'rgba(8,15,10,0.75)';
+    ctx.fillRect(midPt.x - tw/2 - 10, midPt.y - 14, tw + 20, 22);
+    ctx.fillStyle = '#00c96e';
+    ctx.fillText(label, midPt.x, midPt.y);
+    ctx.restore();
+  }
+}
+
+function drawArrowHead(ctx, size, color) {
+  ctx.beginPath();
+  ctx.moveTo(size, 0);
+  ctx.lineTo(-size * 0.6, -size * 0.5);
+  ctx.lineTo(-size * 0.6, size * 0.5);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 8;
+  ctx.fill();
+}
+
+function getPointOnPath(pts, t) {
+  if (pts.length < 2) return pts[0];
+  const totalSegs = pts.length - 1;
+  const seg = Math.min(Math.floor(t * totalSegs), totalSegs - 1);
+  const segT = (t * totalSegs) - seg;
+  const a = pts[seg];
+  const b = pts[seg + 1];
+  return {
+    x: a.x + (b.x - a.x) * segT,
+    y: a.y + (b.y - a.y) * segT
+  };
+}
+
+// ── UI HELPERS ───────────────────────────────────────────
+function showAnalysisPanel(a) {
+  analysisPanel.style.display = 'flex';
+  analysisText.textContent = a.summary || '';
+
+  const confColor = a.confidence === 'high' ? '#00c96e' : a.confidence === 'medium' ? '#f5a623' : '#ff8080';
+  confidenceText.textContent = `${(a.confidence||'').toUpperCase()} CONF`;
+  confidenceText.style.color = confColor;
+
+  const cells = [
+    { label: 'Break', value: formatBreak(a) },
+    { label: 'Slope', value: a.slopePercent != null ? `${a.slopePercent}%` : '–' },
+    { label: 'Speed', value: (a.speedRecommendation||'–').toUpperCase() }
+  ];
+
+  readGrid.innerHTML = cells.map(c => `
+    <div class="read-cell">
+      <span class="read-cell-label">${c.label}</span>
+      <span class="read-cell-value">${c.value}</span>
+    </div>
+  `).join('');
+}
+
+function formatBreak(a) {
+  if (!a.breakDirection || a.breakDirection === 'straight') return '→';
+  const symbol = a.breakDirection === 'left' ? '←' : '→';
+  return `${symbol} ${a.breakDegrees || ''}°`.trim();
+}
+
+function clearAnalysis(silent = false) {
+  lastAnalysis = null;
+  analysisPanel.style.display = 'none';
+  clearBtn.style.display = 'none';
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!silent) setStatus('READY', 'active');
+}
+
+function setStatus(text, state) {
+  statusText.textContent = text;
+  statusDot.className = 'status-dot' + (state ? ` ${state}` : '');
+}
+
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.style.display = 'block';
+  setTimeout(() => toast.style.display = 'none', 4000);
+}
+</script>
+</body>
+</html>
