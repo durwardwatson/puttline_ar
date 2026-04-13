@@ -635,7 +635,10 @@ If you cannot see a clear green/golf context, still return valid JSON with confi
   try {
     const response = await fetch(API_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
       body: JSON.stringify({
         model: MODEL,
         max_tokens: 1000,
@@ -667,8 +670,8 @@ If you cannot see a clear green/golf context, still return valid JSON with confi
 
   } catch(e) {
     console.error(e);
-    showToast('Could not read the green. Try again or move closer to the hole.');
-    setStatus('READY', 'active');
+    showToast('Error: ' + (e.message || 'Unknown error. Check console for details.'));
+    setStatus('ERROR', '');
   } finally {
     analyzeBtn.disabled = false;
     loadingOverlay.classList.remove('visible');
@@ -864,7 +867,7 @@ function setStatus(text, state) {
 function showToast(msg) {
   toast.textContent = msg;
   toast.style.display = 'block';
-  setTimeout(() => toast.style.display = 'none', 4000);
+  setTimeout(() => toast.style.display = 'none', 8000);
 }
 </script>
 </body>
