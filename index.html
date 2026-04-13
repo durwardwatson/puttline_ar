@@ -215,6 +215,8 @@ linePoints: 5-6 points. x=0 left, x=1 right, y=0 top, y=1 bottom. Ball is bottom
     }
 
     const data = await response.json();
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    if (!data.content) throw new Error('Unexpected response: ' + JSON.stringify(data));
     const raw   = data.content.map(b => b.text || '').join('').trim();
     const clean = raw.replace(/```json|```/g, '').trim();
     const analysis = JSON.parse(clean);
